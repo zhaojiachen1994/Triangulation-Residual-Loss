@@ -1,6 +1,6 @@
 _base_ = [
     '../default_runtime.py',
-    '../datasets/mouse_p9'
+    '../datasets/mouse_p12.py'
 ]
 
 
@@ -18,7 +18,7 @@ lr_config = dict(
     warmup_iters=500,
     warmup_ratio=0.001,
     step=[170, 200])
-total_epochs = 100
+total_epochs = 60
 log_config = dict(
     interval=1,
     hooks=[
@@ -27,51 +27,24 @@ log_config = dict(
     ])
 
 channel_cfg = dict(
-    num_output_channels=9,
-    dataset_joints=9,
-    dataset_channel=[1, 2, 0, 3, 6, 7, 8, 9, 10],
-    inference_channel=[1, 2, 0, 3, 6, 7, 8, 9, 10])
-
+    num_output_channels=12,
+    dataset_joints=12,
+    dataset_channel=[
+        0, 1, 2, 3, 4, 5, 6, 7, 9, 13, 16, 19
+    ],
+    inference_channel=[
+        0, 1, 2, 3, 4, 5, 6, 7, 9, 13, 16, 19
+    ])
 
 # model settings
 model = dict(
     type='TopDown',
-    pretrained='D:/Pycharm Projects-win/mm_mouse/mmpose/official_checkpoint/hrnet_w48-8ef0771d.pth',
-    backbone=dict(
-        type='HRNet',
-        in_channels=3,
-        extra=dict(
-            stage1=dict(
-                num_modules=1,
-                num_branches=1,
-                block='BOTTLENECK',
-                num_blocks=(4,),
-                num_channels=(64,)),
-            stage2=dict(
-                num_modules=1,
-                num_branches=2,
-                block='BASIC',
-                num_blocks=(4, 4),
-                num_channels=(48, 96)),
-            stage3=dict(
-                num_modules=4,
-                num_branches=3,
-                block='BASIC',
-                num_blocks=(4, 4, 4),
-                num_channels=(48, 96, 192)),
-            stage4=dict(
-                num_modules=3,
-                num_branches=4,
-                block='BASIC',
-                num_blocks=(4, 4, 4, 4),
-                num_channels=(48, 96, 192, 384))),
-    ),
+    pretrained='mmcls://mobilenet_v2',
+    backbone=dict(type='MobileNetV2', widen_factor=1., out_indices=(7,)),
     keypoint_head=dict(
         type='TopdownHeatmapSimpleHead',
-        in_channels=48,
+        in_channels=1280,
         out_channels=channel_cfg['num_output_channels'],
-        num_deconv_layers=0,
-        extra=dict(final_conv_kernel=1, ),
         loss_keypoint=dict(type='JointsMSELoss', use_target_weight=True)),
     train_cfg=dict(),
     test_cfg=dict(
@@ -150,51 +123,35 @@ val_pipeline = [
 ]
 
 test_pipeline = val_pipeline
-data_root = "D:/Datasets/MARS-PoseAnnotationData"
-
-
-top_dataset_cfg = dict(
-    type='MouseMars2dDataset',
-    ann_file=f'{data_root}/annotations/annotations_top.json',
-    img_prefix=f'{data_root}/raw_images_top/',
-    data_cfg=data_cfg,
-    pipeline=train_pipeline,
-    dataset_info={{_base_.dataset_info}})
-
-front_dataset_cfg = dict(
-    type='MouseMars2dDataset',
-    ann_file=f'{data_root}/annotations/annotations_front.json',
-    img_prefix=f'{data_root}/raw_images_front/',
-    data_cfg=data_cfg,
-    pipeline=train_pipeline,
-    dataset_info={{_base_.dataset_info}})
+data_root = 'D:/Datasets/transfer_mouse/dannce_20230130'
 
 data = dict(
     samples_per_gpu=16,
     workers_per_gpu=2,
-    val_dataloader=dict(samples_per_gpu=16),
-    test_dataloader=dict(samples_per_gpu=16),
+    val_dataloader=dict(samples_per_gpu=32),
+    test_dataloader=dict(samples_per_gpu=32),
     train=dict(
-        type='ConcatDataset',
-        datasets=[top_dataset_cfg, front_dataset_cfg]
-    ),
+        type='MouseDannce2dDatasetSview',
+        ann_file=f'{data_root}/annotations/annotations_train.json',
+        img_prefix=f'{data_root}/images_gray/',
+        data_cfg=data_cfg,
+        pipeline=train_pipeline,
+        dataset_info={{_base_.dataset_info}}),
+
     val=dict(
-        type='MouseMars2dDataset',
-        ann_file=f'{data_root}/annotations/annotations_front.json',
-        img_prefix=f'{data_root}/raw_images_front/',
+        type='MouseDannce2dDatasetSview',
+        ann_file=f'{data_root}/annotations/annotations_eval.json',
+        img_prefix=f'{data_root}/images_gray/',
         data_cfg=data_cfg,
         pipeline=val_pipeline,
         dataset_info={{_base_.dataset_info}}),
+
     test=dict(
-        type='MouseMars2dDataset',
-        ann_file=f'{data_root}/annotations/annotations_front.json',
-        img_prefix=f'{data_root}/raw_images_front/',
+        type='MouseDannce2dDatasetSview',
+        ann_file=f'{data_root}/annotations/annotations_eval.json',
+        img_prefix=f'{data_root}/images_gray/',
         data_cfg=data_cfg,
         pipeline=val_pipeline,
         dataset_info={{_base_.dataset_info}}),
 )
-
-
-
-
 

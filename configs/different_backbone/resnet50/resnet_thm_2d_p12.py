@@ -1,6 +1,6 @@
 _base_ = [
     '../default_runtime.py',
-    '../datasets/mouse_p9'
+    '../datasets/mouse_p12.py'
 ]
 
 
@@ -18,7 +18,7 @@ lr_config = dict(
     warmup_iters=500,
     warmup_ratio=0.001,
     step=[170, 200])
-total_epochs = 100
+total_epochs = 60
 log_config = dict(
     interval=1,
     hooks=[
@@ -27,51 +27,26 @@ log_config = dict(
     ])
 
 channel_cfg = dict(
-    num_output_channels=9,
-    dataset_joints=9,
-    dataset_channel=[1, 2, 0, 3, 6, 7, 8, 9, 10],
-    inference_channel=[1, 2, 0, 3, 6, 7, 8, 9, 10])
-
+    num_output_channels=12,
+    dataset_joints=12,
+    dataset_channel=[
+        0, 1, 2, 3, 4, 5, 6, 7, 9, 13, 16, 19
+    ],
+    inference_channel=[
+        0, 1, 2, 3, 4, 5, 6, 7, 9, 13, 16, 19
+    ])
 
 # model settings
 model = dict(
     type='TopDown',
-    pretrained='D:/Pycharm Projects-win/mm_mouse/mmpose/official_checkpoint/hrnet_w48-8ef0771d.pth',
-    backbone=dict(
-        type='HRNet',
-        in_channels=3,
-        extra=dict(
-            stage1=dict(
-                num_modules=1,
-                num_branches=1,
-                block='BOTTLENECK',
-                num_blocks=(4,),
-                num_channels=(64,)),
-            stage2=dict(
-                num_modules=1,
-                num_branches=2,
-                block='BASIC',
-                num_blocks=(4, 4),
-                num_channels=(48, 96)),
-            stage3=dict(
-                num_modules=4,
-                num_branches=3,
-                block='BASIC',
-                num_blocks=(4, 4, 4),
-                num_channels=(48, 96, 192)),
-            stage4=dict(
-                num_modules=3,
-                num_branches=4,
-                block='BASIC',
-                num_blocks=(4, 4, 4, 4),
-                num_channels=(48, 96, 192, 384))),
-    ),
+    pretrained='https://github.com/whai362/PVT/'
+               'releases/download/v2/pvt_small.pth',
+    backbone=dict(type='PyramidVisionTransformer', num_layers=[3, 4, 6, 3]),
     keypoint_head=dict(
         type='TopdownHeatmapSimpleHead',
-        in_channels=48,
+        in_channels=512,
+        in_index=3,
         out_channels=channel_cfg['num_output_channels'],
-        num_deconv_layers=0,
-        extra=dict(final_conv_kernel=1, ),
         loss_keypoint=dict(type='JointsMSELoss', use_target_weight=True)),
     train_cfg=dict(),
     test_cfg=dict(
@@ -79,6 +54,7 @@ model = dict(
         post_process='default',
         shift_heatmap=True,
         modulate_kernel=11))
+
 
 
 data_cfg = dict(
@@ -150,24 +126,8 @@ val_pipeline = [
 ]
 
 test_pipeline = val_pipeline
-data_root = "D:/Datasets/MARS-PoseAnnotationData"
 
-
-top_dataset_cfg = dict(
-    type='MouseMars2dDataset',
-    ann_file=f'{data_root}/annotations/annotations_top.json',
-    img_prefix=f'{data_root}/raw_images_top/',
-    data_cfg=data_cfg,
-    pipeline=train_pipeline,
-    dataset_info={{_base_.dataset_info}})
-
-front_dataset_cfg = dict(
-    type='MouseMars2dDataset',
-    ann_file=f'{data_root}/annotations/annotations_front.json',
-    img_prefix=f'{data_root}/raw_images_front/',
-    data_cfg=data_cfg,
-    pipeline=train_pipeline,
-    dataset_info={{_base_.dataset_info}})
+data_root = "D:/Datasets/transfer_mouse/thm"
 
 data = dict(
     samples_per_gpu=16,
@@ -175,26 +135,28 @@ data = dict(
     val_dataloader=dict(samples_per_gpu=16),
     test_dataloader=dict(samples_per_gpu=16),
     train=dict(
-        type='ConcatDataset',
-        datasets=[top_dataset_cfg, front_dataset_cfg]
-    ),
-    val=dict(
-        type='MouseMars2dDataset',
-        ann_file=f'{data_root}/annotations/annotations_front.json',
-        img_prefix=f'{data_root}/raw_images_front/',
+        type='THM2dDataset',
+        ann_file=f'{data_root}/annotations/anno_20221229_train.json',
+        img_prefix=f'{data_root}/',
         data_cfg=data_cfg,
-        pipeline=val_pipeline,
+        pipeline=train_pipeline,
         dataset_info={{_base_.dataset_info}}),
-    test=dict(
-        type='MouseMars2dDataset',
-        ann_file=f'{data_root}/annotations/annotations_front.json',
-        img_prefix=f'{data_root}/raw_images_front/',
+
+    val=dict(
+        type='THM2dDataset',
+        ann_file=f'{data_root}/annotations/anno_20221229_test.json',
+        img_prefix=f'{data_root}/',
         data_cfg=data_cfg,
-        pipeline=val_pipeline,
+        pipeline=test_pipeline,
+        dataset_info={{_base_.dataset_info}}),
+
+    test=dict(
+        type='THM2dDataset',
+        ann_file=f'{data_root}/annotations/anno_20221229_test.json',
+        img_prefix=f'{data_root}/',
+        data_cfg=data_cfg,
+        pipeline=test_pipeline,
         dataset_info={{_base_.dataset_info}}),
 )
-
-
-
 
 
