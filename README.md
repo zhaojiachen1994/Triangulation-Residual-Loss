@@ -4,6 +4,7 @@
 ### Introduction
 Code for paper: Triangulation Residual Loss for Data-efficient 3D Pose Estimation. TR loss enables self-supervision with global 3D geometric consistency by minimizing the smallest singular value of the triangulation matrix. Particularly, TR loss aims to minimize the weighted sum of distances from the current 3D estimate to all view rays, so that the view rays will converge to a stable 3D point.
 
+An example video is available [here](https://www.youtube.com/watch?v=CjuV5qEfiFg)
 
 
 ### Usage
